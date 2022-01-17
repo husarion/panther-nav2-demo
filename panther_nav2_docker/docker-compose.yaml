@@ -1,0 +1,56 @@
+version: "2.3"
+
+services:
+
+  # ROS Galactic navigation
+  nav2:
+    image: husarion/nav2:galactic-latest
+    tty: true
+    restart: on-failure
+    network_mode: host
+    ipc: host
+    environment:
+      - "ROS_DOMAIN_ID=0"
+    volumes:
+      - ./config/nav2_params_panther.yaml:/app/ros2_ws/src/husarion_nav2/config/nav2_params.yaml
+      - ./config/slam_toolbox_panther.yaml:/app/ros2_ws/src/husarion_nav2/config/slam_toolbox.yaml
+    command: ros2 launch husarion_nav2 bringup_both.launch.py
+
+  # ROS bridge (galactic)
+  bridge:
+    image: ros:galactic-ros1-bridge
+    restart: on-failure
+    network_mode: host
+    ipc: host
+    tty: true
+    environment:
+      - "ROS_IP=10.15.20.3"
+      - "ROS_MASTER_URI=http://10.15.20.2:11311"
+      - "ROS_DOMAIN_ID=0"
+    command: ros2 run ros1_bridge dynamic_bridge
+
+  # ROS Melodic rplidar node
+  ros-rplidar:
+    image: husarion/rplidar:latest
+    tty: true
+    network_mode: host
+    restart: on-failure
+    environment:
+      - ROS_IP=10.15.20.3
+      - ROS_MASTER_URI=http://10.15.20.2:11311
+    devices:
+      - /dev/ttyUSB0
+    command: roslaunch rplidar_ros rplidar_s1.launch 
+
+  # ROS Foxy Rviz2 VNC
+  rviz2:
+    image: husarion/ros2-desktop-vnc:latest
+    restart: on-failure
+    network_mode: host
+    ipc: host
+    privileged: true
+    environment:
+      - "ROS_DOMAIN_ID=0"
+    volumes:
+      - ./config/panther.rviz:/root/.rviz2/default.rviz
+    shm_size: '512m'
